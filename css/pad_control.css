@@ -1,0 +1,26 @@
+.pad-control{
+    text-align:center;
+}
+
+#manual-control > div{
+    border:1px solid #ccc;
+    margin-right:20px;
+    border-radius:5px;
+    padding: 20px;
+    /* background-color:#f6f8fa; */
+    font-size: 1.5vw;
+}
+
+.v-slider{
+    appearance: slider-vertical;
+    writing-mode:vertical-lr;
+    /* height: 200px; */
+    /* width: 55px; */
+}
+
+#numeric-control{
+    border-bottom: 1px dashed#ccc;
+}
+#numeric-control > div{
+    width:200px;
+}
