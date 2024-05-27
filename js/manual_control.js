@@ -2,9 +2,18 @@
 /////////////////////////////////////////////////////////////////
 var PressCount = 0;
 
-var Position = {
-  x: 0, z: 0, y: 0
-}
+const HOME_POSITION = { x: 20, z: 20, y: 0 };
+const POS_LIMIT = {
+  x: { max: 30, min: 5 },
+  z: { max: 20, min: 0 },
+  y: { max: 0, min: 0 }
+};
+
+var ACTUAL_POSITION = { x : HOME_POSITION.x , z : HOME_POSITION.z , y : HOME_POSITION.y};
+
+$('#home-position').click(function () {
+  ACTUAL_POSITION = { x : HOME_POSITION.x , z : HOME_POSITION.z , y : HOME_POSITION.y};
+});
 
 var PressTimeStart = 0;
 var PressTimeEnd = 0;
@@ -21,35 +30,72 @@ function clearMouseDonwInterval(event) {
   }
 }
 
-const bras_max_limit = 21;
-const bras_min_limit = 0;
+function format_T_Command(angle){
+  if(angle == 0){
+    return "+00";
+  }
+  if(angle < 0 && angle >= -9){
+    return "-0" + Math.abs(angle);
+  }
+  if(angle < -9){
+    return "-" + Math.abs(angle);
+  }
+  if(angle > 0 && angle <= 9){
+    return "+0" + Math.abs(angle);
+  }
+  if(angle > 9){
+    return "+" + Math.abs(angle);
+  }
+}
 
 function calculPosition(e) {
   var pos = e.currentTarget.value;
   var axe = e.currentTarget.dataset.axe;
-  var _pos = Position[axe] + parseInt(pos);
-  if (_pos > bras_min_limit && _pos < bras_max_limit) {
-    Position[axe] += parseInt(pos);
-    console.log('position : ', Position);
-    var anglePos = getPositionAngle(Position.x, Position.z, Position.y);
-    var dataPosition = `T${anglePos.A_deg}${anglePos.B_deg}${anglePos.C_deg}`;
-    console.log(dataPosition);
+  var _pos = ACTUAL_POSITION[axe] + parseInt(pos);
+  if (_pos > POS_LIMIT[axe].min && _pos < POS_LIMIT[axe].max) {
+    ACTUAL_POSITION[axe] = _pos;
+    console.log('ACTUAL_POSITION : ', ACTUAL_POSITION);
+    var anglePos = getPositionAngle(ACTUAL_POSITION.x, ACTUAL_POSITION.z, ACTUAL_POSITION.y);
+    console.log('angle absolute A | B | C :', anglePos.A, "|" + anglePos.B, "|" + anglePos.C);
+    //////////////////////////////////////////////
+    // Adapter l'angle en fonction de la 
+    // postition initiale des bras du robot
+    //////////////////////////////////////////////
+    var angle_a = 90 - anglePos.A;
+    var angle_b = anglePos.B;
+    var angle_c = anglePos.C;
+    ///////////////////////////////////
+    // Format ANGLE as Arduino Command
+    ///////////////////////////////////
+    angle_a = format_T_Command(angle_a);
+    angle_b = format_T_Command(angle_b);
+    angle_c = format_T_Command(angle_c);
+
+    var dataPosition = `T${angle_a}${angle_b}${angle_c}`;
+    console.log("Angles Relatifs : ", dataPosition);
+    console.log("=====================================");
   }
-  else{
-    console.log('out of reach : ' , Position[axe]);
+  else {
+    console.log('out of reach : ', ACTUAL_POSITION[axe]);
   }
+
+
+
 }
 
-// ManualControl.find('button').on('click', function (e) {
-ManualControl.find('button').on('mousedown', function (e) {
-  // calculPosition(e);
-  if (mousedownID == -1) {  //Prevent multimple loops!
-    mousedownID = setInterval(function () {
-      calculPosition(e);
-      // writeToSerialPort(moveData);
-    }, COMMAND_PUSH_DELAY /*execute every ms*/);
-  }
+ManualControl.find('button').on('click', function (e) {
+  calculPosition(e);
 });
+
+// ManualControl.find('button').on('mousedown', function (e) {
+//   // calculPosition(e);
+//   if (mousedownID == -1) {  //Prevent multimple loops!
+//     mousedownID = setInterval(function () {
+//       calculPosition(e);
+//       // writeToSerialPort(moveData);
+//     }, COMMAND_PUSH_DELAY /*execute every ms*/);
+//   }
+// });
 
 ManualControl.find('button').on('mouseup', function (e) {
   clearMouseDonwInterval();
