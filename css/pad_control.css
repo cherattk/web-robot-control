@@ -19,7 +19,7 @@
 }
 
 #numeric-control{
-    border-bottom: 1px dashed#ccc;
+    /* border-bottom: 1px dashed#ccc; */
 }
 #numeric-control > div{
     width:200px;

@@ -1,20 +1,6 @@
 
-/////////////////////////////////////////////////////////////////
+
 var PressCount = 0;
-
-const HOME_POSITION = { x: 20, z: 20, y: 0 };
-const POS_LIMIT = {
-  x: { max: 30, min: 5 },
-  z: { max: 20, min: 0 },
-  y: { max: 0, min: 0 }
-};
-
-var ACTUAL_POSITION = { x : HOME_POSITION.x , z : HOME_POSITION.z , y : HOME_POSITION.y};
-
-$('#home-position').click(function () {
-  ACTUAL_POSITION = { x : HOME_POSITION.x , z : HOME_POSITION.z , y : HOME_POSITION.y};
-});
-
 var PressTimeStart = 0;
 var PressTimeEnd = 0;
 var mousedownID = -1;  //Global ID of mouse down interval
@@ -30,72 +16,70 @@ function clearMouseDonwInterval(event) {
   }
 }
 
-function format_T_Command(angle){
-  if(angle == 0){
-    return "+00";
-  }
-  if(angle < 0 && angle >= -9){
-    return "-0" + Math.abs(angle);
-  }
-  if(angle < -9){
-    return "-" + Math.abs(angle);
-  }
-  if(angle > 0 && angle <= 9){
-    return "+0" + Math.abs(angle);
-  }
-  if(angle > 9){
-    return "+" + Math.abs(angle);
-  }
-}
+$('#home-position').click(function () {
 
-function calculPosition(e) {
-  var pos = e.currentTarget.value;
-  var axe = e.currentTarget.dataset.axe;
-  var _pos = ACTUAL_POSITION[axe] + parseInt(pos);
-  if (_pos > POS_LIMIT[axe].min && _pos < POS_LIMIT[axe].max) {
-    ACTUAL_POSITION[axe] = _pos;
-    console.log('ACTUAL_POSITION : ', ACTUAL_POSITION);
-    var anglePos = getPositionAngle(ACTUAL_POSITION.x, ACTUAL_POSITION.z, ACTUAL_POSITION.y);
-    console.log('angle absolute A | B | C :', anglePos.A, "|" + anglePos.B, "|" + anglePos.C);
-    //////////////////////////////////////////////
-    // Adapter l'angle en fonction de la 
-    // postition initiale des bras du robot
-    //////////////////////////////////////////////
-    var angle_a = 90 - anglePos.A;
-    var angle_b = anglePos.B;
-    var angle_c = anglePos.C;
-    ///////////////////////////////////
+  ////////////////////////////////////////////////
+  var move_angle_a = ACTUAL_ANGLE.A - HOME_ANGLE.A;
+  var move_angle_b = ACTUAL_ANGLE.B - HOME_ANGLE.B;
+  var move_angle_c = ACTUAL_ANGLE.C - HOME_ANGLE.C;
+  ////////////////////////////////////////////////
+  var angle_a = format_T_Command(move_angle_a);
+  var angle_b = format_T_Command(move_angle_b);
+  var angle_c = format_T_Command(move_angle_c);
+  //////////////////////////////////////////////////
+  var dataPosition = `T${angle_a}${angle_b}${angle_c}`;
+  console.log("Move HOME Angle : ", dataPosition);
+  console.log("=====================================");
+  ////////////////////////////////////////////////
+  ACTUAL_POSITION = Object.assign({}, HOME_POSITION);
+  ACTUAL_ANGLE = Object.assign({}, HOME_ANGLE);
+  ////////////////////////////////////////////////
+  document.getElementById('num-input-x').value = HOME_POSITION.x;
+  document.getElementById('num-input-z').value = HOME_POSITION.z;
+  document.getElementById('num-input-y').value = HOME_POSITION.y;
+  ////////////////////////////////////////////////
+  // writeToSerialPort(dataPosition);
+
+});
+
+function getTeachCommand(button) {
+  var pos = button.value;
+  var axe = button.dataset.axe;
+  var next_pos = ACTUAL_POSITION[axe] + parseInt(pos);
+  if (checkPositionLimits(next_pos, axe)) {
+    var marginAngel = calculMarginalPosition(next_pos, axe);
+    ///////////////////////////////////////////////////
     // Format ANGLE as Arduino Command
     ///////////////////////////////////
-    angle_a = format_T_Command(angle_a);
-    angle_b = format_T_Command(angle_b);
-    angle_c = format_T_Command(angle_c);
-
+    var angle_a = format_T_Command(marginAngel.A * GEAR_RATIO);
+    var angle_b = format_T_Command(marginAngel.B * GEAR_RATIO);
+    var angle_c = format_T_Command(marginAngel.C);
     var dataPosition = `T${angle_a}${angle_b}${angle_c}`;
-    console.log("Angles Relatifs : ", dataPosition);
+    console.log("Move Marginal Angle : ", dataPosition);
     console.log("=====================================");
+    return dataPosition;
   }
   else {
-    console.log('out of reach : ', ACTUAL_POSITION[axe]);
+    console.log('reach limit');
   }
-
-
-
 }
 
 ManualControl.find('button').on('click', function (e) {
-  calculPosition(e);
+  getTeachCommand(e.currentTarget);
 });
 
-// ManualControl.find('button').on('mousedown', function (e) {
-//   // calculPosition(e);
-//   if (mousedownID == -1) {  //Prevent multimple loops!
-//     mousedownID = setInterval(function () {
-//       calculPosition(e);
-//       // writeToSerialPort(moveData);
-//     }, COMMAND_PUSH_DELAY /*execute every ms*/);
-//   }
-// });
+
+ManualControl.find('button').on('mousedown', function (e) {
+  // calculPosition(e);
+  if (mousedownID == -1 && ArduinoSerialPort) {  //Prevent multimple loops!
+    mousedownID = setInterval(function () {
+      var teachCommand = getTeachCommand(e.currentTarget);
+      if (teachCommand) {
+        writeToSerialPort(teachCommand);
+      }
+    }, COMMAND_PUSH_DELAY /*execute every ms*/);
+  }
+});
 
 ManualControl.find('button').on('mouseup', function (e) {
   clearMouseDonwInterval();

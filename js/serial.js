@@ -3,6 +3,7 @@ var COMMAND_PUSH_DELAY = 10;
 const BAUD_RATE = 9600;
 const SerialBufferSize = 64;
 const ManualControl = $('#manual-control');
+
 document.getElementById('usb-connection').addEventListener("click", async (e) => {
   ArduinoSerialPort = await navigator.serial.requestPort();
   // Initialize the list of available ports with `ports` on page load.
@@ -36,7 +37,7 @@ function readFromSerial() {
     try {
       reader.read().then(function (result) {
         if (!result.done) {
-          console.log('read : ' + decoder.decode(result.value));
+          console.log('arduino says : ' + decoder.decode(result.value));
           reader.releaseLock();
         }
       });
@@ -66,8 +67,7 @@ function writeToSerialPort(moveData) {
             console.log(err);
           }).finally(function () {
             // Allow the serial port to be closed later.
-            writer.releaseLock();
-            // readFromSerial();
+            writer.releaseLock();            
           });
       }
       // else {
@@ -82,3 +82,10 @@ function writeToSerialPort(moveData) {
     console.log("ArduinoSerialPort.writable.locked : " + ArduinoSerialPort.writable.locked);
   }
 }
+
+// start reading
+// setInterval(() => {
+//   if(ArduinoSerialPort){
+//     readFromSerial();
+//   }
+// }, 1000);
